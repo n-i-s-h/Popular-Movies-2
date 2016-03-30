@@ -1,0 +1,96 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools" android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingLeft="0dp"
+    android:paddingRight="0dp"
+    android:paddingTop="0dp"
+    android:paddingBottom="0dp"
+    tools:context="com.nishithkumar.popularmovies.MovieDetails">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="80dp"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:background="#00897B"
+        android:id="@+id/frameLayout">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:layout_marginLeft="10dp"
+            android:textColor="@android:color/white"
+            android:text="Large Text"
+            android:id="@+id/title"
+            android:textStyle="bold"
+            android:layout_gravity="left|center_vertical" />
+    </FrameLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+
+        android:id="@+id/scrollView"
+        android:layout_below="@+id/frameLayout"
+        android:layout_centerHorizontal="true" >
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_above="@+id/scrollView"
+            android:layout_alignLeft="@+id/scrollView"
+            android:layout_alignStart="@+id/scrollView"
+            android:layout_marginBottom="47dp">
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:minHeight="200dp"
+            android:minWidth="150dp"
+            android:id="@+id/poster" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:text="Medium Text"
+                android:id="@+id/releaseDate"
+                android:textStyle="bold"
+                android:layout_marginLeft="46dp"
+                android:layout_marginStart="46dp"
+                android:layout_alignTop="@+id/poster"
+                android:layout_toRightOf="@+id/poster"
+                android:layout_toEndOf="@+id/poster"
+                android:layout_marginTop="60dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceMedium"
+                android:text="Medium Text"
+                android:id="@+id/plot"
+                android:layout_below="@+id/poster"
+                android:layout_marginTop="10dp"
+                android:layout_marginLeft="5dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:text="Large Text"
+                android:id="@+id/voteAverage"
+                android:textColor="#00897B"
+                android:layout_below="@+id/releaseDate"
+                android:layout_alignLeft="@+id/releaseDate"
+                android:layout_alignStart="@+id/releaseDate"
+                android:layout_marginTop="10dp"/>
+
+        </RelativeLayout>
+    </ScrollView>
+
+
+
+
+</RelativeLayout>
