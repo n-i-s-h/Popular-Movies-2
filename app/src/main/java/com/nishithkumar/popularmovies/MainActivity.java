@@ -68,15 +68,25 @@ public class MainActivity extends AppCompatActivity {
         /* If saved last selection populate it */
         sharedPref = getPreferences(Context.MODE_PRIVATE);
         lastSelection  = sharedPref.getString("SELECTION","TOP_RATED");
-        
-        //Start background task to download Movie list
-        FetchMoviesTask fetchMoviesTask = new FetchMoviesTask();
-        fetchMoviesTask.execute(lastSelection);
 
         gridView = (GridView) findViewById(R.id.gridview);
         mImageAdapter = new ImageAdapter(this,movieIds);
         gridView.setAdapter(mImageAdapter);
-        //gridView.setAdapter(new ImageAdapter(this,movieIds));
+
+        if(savedInstanceState != null){
+            //get your data saved and populate the adapter here
+            movieIds = savedInstanceState.getStringArray("MOVIES");
+            mImageAdapter.updateGrid(movieIds);
+            mImageAdapter.notifyDataSetChanged();
+            Log.d(TAG, "Restore savedInstanceState : Retrieve Movie List!");
+        }else{
+
+            Log.d(TAG, "savedInstanceState is Null!");
+
+            //Start background task to download Movie list
+            FetchMoviesTask fetchMoviesTask = new FetchMoviesTask();
+            fetchMoviesTask.execute(lastSelection);
+        }
 
         gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -117,13 +127,22 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+
+    protected void onSaveInstanceState(Bundle outState) {
+        //outState.putParcelableArrayList("MOVIES", movieIds);
+        outState.putStringArray("MOVIES", movieIds);
+        Log.d(TAG, "onSaveInstanceState : Saved movies data! ");
+        super.onSaveInstanceState(outState);
+    }
+
+
     @Override
     protected void onPause() {
         super.onPause();
         Log.d(TAG, "onPause! ");
         sharedPref = getPreferences(Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPref.edit();
-        editor.putString("SELECTION",lastSelection);
+        editor.putString("SELECTION", lastSelection);
         editor.commit();
 
     }
@@ -143,13 +162,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    @Override
-    public void onSaveInstanceState(Bundle outState, PersistableBundle outPersistentState) {
-
-        Log.d(TAG, "onSaveInstanceState! ");
-        super.onSaveInstanceState(outState, outPersistentState);
-
-    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -200,9 +212,6 @@ public class MainActivity extends AppCompatActivity {
             JSONObject moviesJson = new JSONObject(moviesJsonStr);
             resultsArray = moviesJson.getJSONArray("results");
 
-           // Log.d(TAG, "*************************************" );
-           // Log.d(TAG, " results Array length = " + resultsArray.length());
-
             try {
             /* Get poster-path for each entry in results */
                 for (int i = 0; i < resultsArray.length(); i++) {
@@ -238,10 +247,7 @@ public class MainActivity extends AppCompatActivity {
             BufferedReader reader = null;
             String download_type = params[0];
 
-            // Will contain the raw JSON response as a string.
-
-            Log.e(TAG," ---------- Download type = "+ download_type + " ---------- ");
-
+            Log.e(TAG," ***** Download type: "+ download_type + " ***** ");
 
             try {
                 // Construct the URL for the query
@@ -250,7 +256,6 @@ public class MainActivity extends AppCompatActivity {
                 final String TOP_RATED_MOVIES_URL = "http://api.themoviedb.org/3/movie/top_rated?api_key=" + API_KEY;
                 final String POPULAR_MOVIES_URL =  "http://api.themoviedb.org/3/movie/popular?api_key=" + API_KEY;
                 Uri builtUri = null;
-
 
                 if(download_type.compareToIgnoreCase("TOP_RATED")==0 ){
                     builtUri = Uri.parse(TOP_RATED_MOVIES_URL).buildUpon().build();
@@ -262,7 +267,6 @@ public class MainActivity extends AppCompatActivity {
                     builtUri = Uri.parse(POPULAR_MOVIES_URL).buildUpon().build();
                     lastSelection = "POPULAR";
                 }
-
 
                 URL url = new URL(builtUri.toString());
 
@@ -337,7 +341,6 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(Boolean result) {
             super.onPostExecute(result);
-            //Log.d(TAG, " FetchMoviesTask : result=" + result);
 
             mImageAdapter.updateGrid(movieIds);
             mImageAdapter.notifyDataSetChanged();
@@ -345,7 +348,6 @@ public class MainActivity extends AppCompatActivity {
 
 
     }
-
 
 
 }

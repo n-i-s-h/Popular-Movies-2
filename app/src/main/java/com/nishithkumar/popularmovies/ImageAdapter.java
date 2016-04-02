@@ -20,6 +20,7 @@ import android.content.Context;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.URLUtil;
 import android.widget.BaseAdapter;
 import android.widget.GridView;
 import android.widget.ImageView;
@@ -85,9 +86,28 @@ public class ImageAdapter extends BaseAdapter {
             imageView = (ImageView) convertView;
         }
 
-        //Log.d(TAG, "getView - this.mMovieIds[position] = " + this.mMovieIds.get(position));
-        Picasso.with(this.mContext).load(this.mMovieIds.get(position)).into(imageView);
-        //imageView.setImageResource(mMovieIds[position]);
+        //Check if it is a valid  URL
+        // Also add placeholder image and error image
+        /*
+        Picasso.with(context)
+            .load(url)
+            .placeholder(R.drawable.user_placeholder)
+            .error(R.drawable.user_placeholder_error)
+            .into(imageView);
+         */
+
+        try {
+            boolean isValid = URLUtil.isValidUrl(mMovieIds.get(position));
+            if(isValid)
+                Picasso.with(this.mContext).load(this.mMovieIds.get(position)).into(imageView);
+            else
+                Log.d(TAG, "Invalid URL! - " + mMovieIds.get(position));
+
+            Picasso.with(this.mContext).load(this.mMovieIds.get(position)).into(imageView);
+            //imageView.setImageResource(mMovieIds[position]);
+        }catch(Exception e){
+            e.printStackTrace();
+        }
 
         return imageView;
     }
