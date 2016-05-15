@@ -97,6 +97,7 @@ public class MainActivity extends AppCompatActivity {
                 String plot = null ;
                 String releaseDate = null ;
                 String voteAverage = null ;
+                int movieID = 0;
 
                 try {
                         movieDetails = resultsArray.getJSONObject(position);
@@ -105,7 +106,7 @@ public class MainActivity extends AppCompatActivity {
                         plot = movieDetails.getString("overview");
                         releaseDate = movieDetails.getString("release_date");
                         voteAverage = movieDetails.getString("vote_average");
-
+                        movieID = movieDetails.getInt("id");
                 }catch(Exception e){
                     e.printStackTrace();
                 }finally{
@@ -119,22 +120,28 @@ public class MainActivity extends AppCompatActivity {
                     detailsIntent.putExtra("movie_plot",plot);
                     detailsIntent.putExtra("movie_release_date",releaseDate);
                     detailsIntent.putExtra("movie_vote_average",voteAverage);
-                    startActivity(detailsIntent);
-                }
+                    detailsIntent.putExtra("movie_id",movieID);
+    startActivity(detailsIntent);
+}
 
-            } //end function
+} //end function
         });
 
-    }
+        }
 
 
-    protected void onSaveInstanceState(Bundle outState) {
+protected void onSaveInstanceState(Bundle outState) {
         //outState.putParcelableArrayList("MOVIES", movieIds);
         outState.putStringArray("MOVIES", movieIds);
         Log.d(TAG, "onSaveInstanceState : Saved movies data! ");
         super.onSaveInstanceState(outState);
-    }
+        }
 
+@Override
+protected void onStart() {
+        super.onStart();
+        Log.d(TAG, "onStart!");
+        }
 
     @Override
     protected void onPause() {
@@ -150,18 +157,21 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-
         Log.d(TAG, "onResume! ");
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-
         Log.d(TAG, "onStop! ");
     }
 
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Log.d(TAG, "onDestroy!");
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -194,7 +204,6 @@ public class MainActivity extends AppCompatActivity {
 
 
   /* Custom class to run Background task */
-
     class FetchMoviesTask extends AsyncTask<String,Void,Boolean> {
 
         @Override
