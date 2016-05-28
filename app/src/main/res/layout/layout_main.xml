@@ -9,9 +9,9 @@
     android:horizontalSpacing="2dp"
     android:stretchMode="columnWidth"
     android:gravity="center"
-    android:background="#00897B"
+    android:background="@color/background_material_dark"
 
     />
 
 
-    <!--  android:columnWidth="120dp"    android:stretchMode="columnWidth"  -->
+    <!--  android:columnWidth="120dp"       android:background="#00897B"    android:stretchMode="columnWidth"  -->

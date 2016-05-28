@@ -26,6 +26,14 @@
             android:parentActivityName = ".MainActivity">
         </activity>
 
+        <provider
+            android:authorities="com.nishithkumar.popularmovies"
+            android:name="com.nishithkumar.popularmovies.data.MovieDataProvider"
+            android:exported="false"
+            android:grantUriPermissions="true"
+            android:readPermission="com.nishithkumar.popularmovies.data.MovieDataProvide.READ"
+            android:writePermission="com.nishithkumar.popularmovies.data.MovieDataProvide.WRITE" />
+
     </application>
 
 </manifest>

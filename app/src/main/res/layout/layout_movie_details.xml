@@ -139,6 +139,17 @@
                     android:id="@+id/reviews_listView" />
             </LinearLayout>
 
+            <ToggleButton
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/favourite_button"
+                android:textOn="@string/favourite_button_on"
+                android:textOff="@string/favourite_button_off"
+                android:id="@+id/favouriteButton"
+                android:layout_below="@+id/voteAverage"
+                android:layout_alignLeft="@+id/voteAverage"
+                android:layout_alignStart="@+id/voteAverage" />
+
         </RelativeLayout>
     </ScrollView>
 

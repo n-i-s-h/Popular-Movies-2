@@ -16,7 +16,11 @@
 
 package com.nishithkumar.popularmovies;
 
+import android.content.ContentValues;
+import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
@@ -27,11 +31,15 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.ToggleButton;
 
+import com.nishithkumar.popularmovies.data.MoviesContract;
+import com.nishithkumar.popularmovies.data.MoviesDBHelper;
 import com.squareup.picasso.Picasso;
 
 import org.json.JSONArray;
@@ -45,14 +53,17 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.PriorityQueue;
 
 public class MovieDetails extends AppCompatActivity {
+    private Context mContext;
     private String title;
     private String poster;
     private String plot;
     private String releaseDate ;
     private String voteAverage;
-    int movieID;
+    private int movieID;
+    private static int MAX_LIMIT = 20;
 
     /* Trailers and reviews */
     static final int TRAILERS = 0;
@@ -62,6 +73,7 @@ public class MovieDetails extends AppCompatActivity {
     ArrayList youtubeKeys = new ArrayList<String>();
     ArrayList trailerNames = new ArrayList<String>();
     ArrayList reviews = new ArrayList<String>();
+    ToggleButton favButton;
 
     private static String TAG = "Popular Movies";
 
@@ -69,6 +81,8 @@ public class MovieDetails extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.layout_movie_details);
+
+        mContext = getApplicationContext();
 
         //Intent which started this activity
         Intent detailsIntent = getIntent();
@@ -122,10 +136,10 @@ public class MovieDetails extends AppCompatActivity {
         fetchTrailersTask.execute(movieID,TRAILERS);
 
         FetchTrailerTask fetchReviewsTask = new FetchTrailerTask();
-        fetchReviewsTask.execute(movieID,REVIEWS);
+        fetchReviewsTask.execute(movieID, REVIEWS);
 
 
-        /* set item click listners */
+        /* set item click listeners */
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -140,6 +154,120 @@ public class MovieDetails extends AppCompatActivity {
 
         });
 
+
+        /* set-up the favourite button */
+        favButton = (ToggleButton) findViewById(R.id.favouriteButton);
+        //favButton.setText("Favourite");
+
+        MoviesDBHelper dbHelper = new MoviesDBHelper(getApplicationContext());
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        String columns[] = {MoviesContract.MoviesTable.COLUMN_MOVIE_ID} ;
+        String whereColumn = MoviesContract.MoviesTable.COLUMN_MOVIE_ID ;
+        String[] selectionArgs = { Integer.toString(movieID)};
+
+
+
+        Cursor cursor = db.query(
+                MoviesContract.MoviesTable.TABLE_NAME,  // Table to Query
+                columns, // all columns
+                whereColumn + "=?", // Columns for the "where" clause
+                selectionArgs, // Values for the "where" clause
+                null, // columns to group by
+                null, // columns to filter by row groups
+                null // sort order
+        );
+
+
+        if(cursor.getCount() == 1 ){
+            //Already added to favourites
+            favButton.setChecked(true);
+        }else{
+            //Not added to favourites
+            favButton.setChecked(false);
+        }
+
+        //Close DB connection to avoid leaks
+        cursor.close();
+        dbHelper.close();
+
+        favButton.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+
+                // First step: Get reference to writable database
+                MoviesDBHelper dbHelper = new MoviesDBHelper(mContext);
+                SQLiteDatabase db = dbHelper.getWritableDatabase();
+
+
+                if (isChecked) {
+                    // The toggle is enabled
+
+                    //Add oly upto MAX_LIMIT
+                    String columns[] = {MoviesContract.MoviesTable.COLUMN_MOVIE_ID} ;
+
+                    Cursor cursor = db.query(
+                            MoviesContract.MoviesTable.TABLE_NAME,  // Table to Query
+                            columns, // all columns
+                            null + "=?", // Columns for the "where" clause
+                            null, // Values for the "where" clause
+                            null, // columns to group by
+                            null, // columns to filter by row groups
+                            null // sort order
+                    );
+
+
+                    if(cursor.getCount() <= MAX_LIMIT) {
+
+                        /* check if already present */
+
+                        Toast.makeText(getApplicationContext(), "Added to Favourites", Toast.LENGTH_SHORT).show();
+                        // Second Step: Create ContentValues of what you want to insert
+                        ContentValues testValues = getMovieValues();
+                        db.insert(MoviesContract.MoviesTable.TABLE_NAME, null, testValues);
+                        // Insert Trailers
+                        // Insert Reviews
+                    }else{
+                        Toast.makeText(getApplicationContext(), "Favourites Max Limit reached!", Toast.LENGTH_LONG).show();
+                    }
+
+
+                } else {
+                    // The toggle is disabled
+                    // Delete the favourite
+                    String whereClause = MoviesContract.MoviesTable.COLUMN_MOVIE_ID;
+                    String whereArgs[]={Integer.toString(movieID)};
+                    Toast.makeText(getApplicationContext(),"Removed from Favourites",Toast.LENGTH_SHORT).show();
+                    db.delete(
+                            MoviesContract.MoviesTable.TABLE_NAME,  // Table to Query
+                            whereClause+"=?", // all columns
+                            whereArgs // Columns for the "where" clause
+                    );
+
+                }
+
+                //Close DB connection to avoid leaks
+                dbHelper.close();
+            }
+        });
+    }
+
+
+    /* Helper function to populate row values into Movies Table */
+     ContentValues getMovieValues() {
+        ContentValues movieValues = new ContentValues();
+
+         movieValues.put(MoviesContract.MoviesTable.COLUMN_MOVIE_ID, movieID);
+         movieValues.put(MoviesContract.MoviesTable.COLUMN_MOVIE_TITLE, title);
+         movieValues.put(MoviesContract.MoviesTable.COLUMN_POSTER_URL,poster);
+         movieValues.put(MoviesContract.MoviesTable.COLUMN_POSTER_LOCAL, poster);
+         movieValues.put(MoviesContract.MoviesTable.COLUMN_RELEASE_DATE, releaseDate);
+         movieValues.put(MoviesContract.MoviesTable.COLUMN_RATING, voteAverage);
+         movieValues.put(MoviesContract.MoviesTable.COLUMN_PLOT, plot );
+         movieValues.put(MoviesContract.MoviesTable.COLUMN_FAVOURITE, 1);
+         movieValues.put(MoviesContract.MoviesTable.COLUMN_POPULAR, 0);
+         movieValues.put(MoviesContract.MoviesTable.COLUMN_TOP_RATED, 0);
+
+        return movieValues;
     }
 
     @Override
@@ -270,7 +398,7 @@ public class MovieDetails extends AppCompatActivity {
             try {
                 // Construct the URL for the query
 
-                final String API_KEY = "----YOUR-API-KEY----";
+                final String API_KEY = "<---YOUR-API-KEY--->";
                 final String BASE_URL = "http://api.themoviedb.org/3/movie/" ;
 
                 final String TRAILER_URL = BASE_URL + movieID + "/videos?api_key=" + API_KEY;

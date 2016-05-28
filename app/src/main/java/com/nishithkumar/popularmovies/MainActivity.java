@@ -19,9 +19,10 @@ package com.nishithkumar.popularmovies;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.os.PersistableBundle;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -31,6 +32,9 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.GridView;
 import android.widget.Toast;
+
+import com.nishithkumar.popularmovies.data.MoviesContract;
+import com.nishithkumar.popularmovies.data.MoviesDBHelper;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -45,13 +49,18 @@ import java.net.URL;
 
 public class MainActivity extends AppCompatActivity {
     private static String TAG = "Popular Movies";
-    public String[] movieIds;
+    public String[] moviePoster;
+    private int[] movieID;
     private ImageAdapter mImageAdapter;
     private GridView gridView;
     private String moviesJsonStr ;
     private static int MAX_RESULTS = 20;
+    private final static String FAVOURITES = "FAVOURITES";
+    private final static String TOP_RATED = "TOP_RATED";
+    private final static String POPULAR = "POPULAR";
     private JSONArray resultsArray ;
     private String lastSelection ;
+    private boolean isFavourite;
     SharedPreferences sharedPref;
 
 
@@ -60,8 +69,10 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.layout_main);
 
-        movieIds = new String[20];
+        moviePoster = new String[MAX_RESULTS];
+        movieID = new int[MAX_RESULTS];
         lastSelection = "TOP_RATED";
+        isFavourite = false;
 
         Log.d(TAG, "onCreate! ");
 
@@ -70,22 +81,27 @@ public class MainActivity extends AppCompatActivity {
         lastSelection  = sharedPref.getString("SELECTION","TOP_RATED");
 
         gridView = (GridView) findViewById(R.id.gridview);
-        mImageAdapter = new ImageAdapter(this,movieIds);
+        mImageAdapter = new ImageAdapter(this, moviePoster);
         gridView.setAdapter(mImageAdapter);
 
         if(savedInstanceState != null){
             //get your data saved and populate the adapter here
-            movieIds = savedInstanceState.getStringArray("MOVIES");
-            mImageAdapter.updateGrid(movieIds);
+            moviePoster = savedInstanceState.getStringArray("MOVIES");
+            mImageAdapter.updateGrid(moviePoster);
             mImageAdapter.notifyDataSetChanged();
             Log.d(TAG, "Restore savedInstanceState : Retrieve Movie List!");
         }else{
 
             Log.d(TAG, "savedInstanceState is Null!");
 
-            //Start background task to download Movie list
-            FetchMoviesTask fetchMoviesTask = new FetchMoviesTask();
-            fetchMoviesTask.execute(lastSelection);
+            if(lastSelection.compareTo(FAVOURITES) == 0){
+                //Display favourites
+                getFavourites();
+            }else {
+                //Start background task to download Movie list
+                FetchMoviesTask fetchMoviesTask = new FetchMoviesTask();
+                fetchMoviesTask.execute(lastSelection);
+            }
         }
 
         gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -97,42 +113,97 @@ public class MainActivity extends AppCompatActivity {
                 String plot = null ;
                 String releaseDate = null ;
                 String voteAverage = null ;
-                int movieID = 0;
+                int movieIDVal = 0;
 
-                try {
+                if(isFavourite){
+                    Toast.makeText(getApplicationContext()," Details" ,Toast.LENGTH_SHORT).show();
+
+                    // First step: Get reference to writable database
+                    MoviesDBHelper dbHelper = new MoviesDBHelper(getApplicationContext());
+                    SQLiteDatabase db = dbHelper.getWritableDatabase();
+
+                    String whereColumn = MoviesContract.MoviesTable.COLUMN_MOVIE_ID ;
+                    String[] selectionArgs = { Long.toString(movieID[position])};
+
+
+                    Cursor cursor = db.query(
+                            MoviesContract.MoviesTable.TABLE_NAME,  // Table to Query
+                            null, // all columns
+                            whereColumn + "=?", // Columns for the "where" clause
+                            selectionArgs, // Values for the "where" clause
+                            null, // columns to group by
+                            null, // columns to filter by row groups
+                            null // sort order
+                    );
+
+
+
+                    //Log.d(TAG, "Num roes returned : " +cursor.getCount() );
+                    cursor.moveToFirst();
+                    int index = cursor.getColumnIndex(MoviesContract.MoviesTable.COLUMN_MOVIE_TITLE);
+                    title = cursor.getString(index);
+
+                    index = cursor.getColumnIndex(MoviesContract.MoviesTable.COLUMN_POSTER_LOCAL);
+                    poster = cursor.getString(index);
+
+                    index = cursor.getColumnIndex(MoviesContract.MoviesTable.COLUMN_PLOT);
+                    plot = cursor.getString(index);
+
+                    index = cursor.getColumnIndex(MoviesContract.MoviesTable.COLUMN_RELEASE_DATE);
+                    releaseDate =  cursor.getString(index);
+
+                    index = cursor.getColumnIndex(MoviesContract.MoviesTable.COLUMN_RATING);
+                    voteAverage = Long.toString(cursor.getLong(index));
+
+                    index = cursor.getColumnIndex(MoviesContract.MoviesTable.COLUMN_MOVIE_ID);
+                    movieIDVal = cursor.getInt(index);
+
+
+
+                    //Close DB connection to avoid leaks
+                    cursor.close();
+                    dbHelper.close();
+
+                }else {
+
+                    try {
                         movieDetails = resultsArray.getJSONObject(position);
                         title = movieDetails.getString("title");
-                        poster = movieIds[position];
+                        poster = moviePoster[position];
                         plot = movieDetails.getString("overview");
                         releaseDate = movieDetails.getString("release_date");
                         voteAverage = movieDetails.getString("vote_average");
-                        movieID = movieDetails.getInt("id");
-                }catch(Exception e){
-                    e.printStackTrace();
-                }finally{
+                        movieIDVal = movieDetails.getInt("id");
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    } finally {
 
+                    }
+
+                }//end else
+
+                /* Start new activity */
+                if (movieIDVal != 0) {
+                    Intent detailsIntent = new Intent(getApplicationContext(), MovieDetails.class);
+                    detailsIntent.putExtra("movie_title", title);
+                    detailsIntent.putExtra("movie_poster", poster);
+                    detailsIntent.putExtra("movie_plot", plot);
+                    detailsIntent.putExtra("movie_release_date", releaseDate);
+                    detailsIntent.putExtra("movie_vote_average", voteAverage);
+                    detailsIntent.putExtra("movie_id", movieIDVal);
+                    startActivity(detailsIntent);
                 }
 
-                if(movieDetails != null) {
-                    Intent detailsIntent = new Intent(getApplicationContext(), MovieDetails.class);
-                    detailsIntent.putExtra("movie_title",title);
-                    detailsIntent.putExtra("movie_poster",poster);
-                    detailsIntent.putExtra("movie_plot",plot);
-                    detailsIntent.putExtra("movie_release_date",releaseDate);
-                    detailsIntent.putExtra("movie_vote_average",voteAverage);
-                    detailsIntent.putExtra("movie_id",movieID);
-    startActivity(detailsIntent);
-}
-
-} //end function
+            } //end function
         });
 
-        }
+        /* end onCreate() */
+    }
 
 
 protected void onSaveInstanceState(Bundle outState) {
-        //outState.putParcelableArrayList("MOVIES", movieIds);
-        outState.putStringArray("MOVIES", movieIds);
+        //outState.putParcelableArrayList("MOVIES", moviePoster);
+        outState.putStringArray("MOVIES", moviePoster);
         Log.d(TAG, "onSaveInstanceState : Saved movies data! ");
         super.onSaveInstanceState(outState);
         }
@@ -189,19 +260,79 @@ protected void onStart() {
 
         //noinspection SimplifiableIfStatement
         if(id == R.id.action_popularity){
+            isFavourite = false;
             FetchMoviesTask fetchMoviesTask = new FetchMoviesTask();
             fetchMoviesTask.execute("POPULAR");
             return true;
         }else if(id == R.id.action_top_rated) {
+            isFavourite = false;
             FetchMoviesTask fetchMoviesTask = new FetchMoviesTask();
             fetchMoviesTask.execute("TOP_RATED");
             return true;
-        }
-
+        }else if(id == R.id.action_favourites) {
+            isFavourite = true;
+            Toast.makeText(MainActivity.this, "Favourites", Toast.LENGTH_SHORT).show();
+            getFavourites();
+            return true;
+    }
 
     return super.onOptionsItemSelected(item);
     }
 
+
+    /* Helper function to get favourites from database */
+    private void getFavourites(){
+
+        String[] columns = {MoviesContract.MoviesTable.COLUMN_MOVIE_ID,
+                            MoviesContract.MoviesTable.COLUMN_POSTER_LOCAL};
+        MoviesDBHelper dbHelper = new MoviesDBHelper(getApplicationContext());
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+
+        /* Save state to shared prefernces */
+        lastSelection = FAVOURITES;
+
+        Cursor cursor = db.query(
+                MoviesContract.MoviesTable.TABLE_NAME,  // Table to Query
+                columns, // all columns
+                null, // Columns for the "where" clause
+                null, // Values for the "where" clause
+                null, // columns to group by
+                null, // columns to filter by row groups
+                null // sort order
+        );
+
+
+        /* Clear movies list and update favourites */
+        for (int i=0; i< moviePoster.length; i++)
+        {
+            moviePoster[i] = "c:/test/path-to-file";
+        }
+
+
+        cursor.moveToFirst();
+
+        int indexMovieID = cursor.getColumnIndex(MoviesContract.MoviesTable.COLUMN_MOVIE_ID);
+        int indexPoster = cursor.getColumnIndex(MoviesContract.MoviesTable.COLUMN_POSTER_LOCAL);
+
+        Log.e(TAG, "**********************************************************************");
+
+        int i=0;
+        while (cursor.isAfterLast() == false) {
+            Log.e(TAG, " Cursor:indexMovieID=" + indexMovieID + "   indexPoster="+indexPoster);
+            movieID[i] = cursor.getInt(indexMovieID);
+            moviePoster[i] = cursor.getString(indexPoster);
+            i++;
+            cursor.moveToNext();
+        }
+
+        cursor.close();
+
+
+        /* Update UI */
+        mImageAdapter.updateGrid(moviePoster);
+        mImageAdapter.notifyDataSetChanged();
+
+    }
 
   /* Custom class to run Background task */
     class FetchMoviesTask extends AsyncTask<String,Void,Boolean> {
@@ -233,8 +364,8 @@ protected void onStart() {
 
                     //save in result array
                     if (rel_poster_path != null) {
-                        movieIds[i] = BASE_URL + IMAGE_SIZE + rel_poster_path;
-                        //Log.d(TAG, "Full Poster path " + i + " = " + result[i]);
+                        moviePoster[i] = BASE_URL + IMAGE_SIZE + rel_poster_path;
+                        Log.d(TAG, "Full Poster path " + i + " = " +  moviePoster[i]);
                     }
 
                 }
@@ -261,7 +392,7 @@ protected void onStart() {
             try {
                 // Construct the URL for the query
 
-                final String API_KEY = "----YOUR-API-KEY----";
+                final String API_KEY = "<---YOUR-API-KEY--->";
                 final String TOP_RATED_MOVIES_URL = "http://api.themoviedb.org/3/movie/top_rated?api_key=" + API_KEY;
                 final String POPULAR_MOVIES_URL =  "http://api.themoviedb.org/3/movie/popular?api_key=" + API_KEY;
                 Uri builtUri = null;
@@ -351,7 +482,7 @@ protected void onStart() {
         protected void onPostExecute(Boolean result) {
             super.onPostExecute(result);
 
-            mImageAdapter.updateGrid(movieIds);
+            mImageAdapter.updateGrid(moviePoster);
             mImageAdapter.notifyDataSetChanged();
       }
 

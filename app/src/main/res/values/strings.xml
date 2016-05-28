@@ -5,6 +5,9 @@
     <string name="action_settings">Settings</string>
     <string name="action_top_rated">Top rated movies</string>
     <string name="action_popularity">Popular movies</string>
+    <string name="action_favourites">Favourite movies</string>
     <string name="title_activity_movie_details">Movie Details</string>
-
+    <string name="favourite_button">Add Favourite</string>
+    <string name="favourite_button_off">Add Favourite</string>
+    <string name="favourite_button_on">Delete Favourite</string>
 </resources>
